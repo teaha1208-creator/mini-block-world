@@ -75,33 +75,63 @@ function decodeEntities(s) {
   return String(s).replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (c) => ENTITIES[c] || c);
 }
 
+async function fetchWithTimeout(url, timeoutMs) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function googleTranslate(chunk, source, target) {
+  const url =
+    'https://translate.googleapis.com/translate_a/single?client=gtx&dt=t' +
+    '&sl=' + encodeURIComponent(source) + '&tl=' + encodeURIComponent(target) +
+    '&q=' + encodeURIComponent(chunk);
+  const res = await fetchWithTimeout(url, UPSTREAM_TIMEOUT_MS);
+  if (!res.ok) throw new Error('번역 서버 오류 (HTTP ' + res.status + ')');
+  const data = await res.json();
+  if (!Array.isArray(data) || !Array.isArray(data[0])) {
+    throw new Error('번역 서버 응답 형식이 올바르지 않습니다.');
+  }
+  const text = data[0].map((seg) => (seg && seg[0]) || '').join('');
+  if (!text) throw new Error('번역 결과가 비어 있습니다.');
+  return text;
+}
+
 async function myMemoryTranslate(chunk, source, target) {
   const url =
     'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(chunk) +
     '&langpair=' + encodeURIComponent(source) + '%7C' + encodeURIComponent(target) +
     '&de=teaha1208@example.com';
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), UPSTREAM_TIMEOUT_MS);
+  const res = await fetchWithTimeout(url, UPSTREAM_TIMEOUT_MS);
+  if (!res.ok) throw new Error('번역 서버 오류 (HTTP ' + res.status + ')');
+  const data = await res.json();
+  const status = Number(data.responseStatus);
+  const translated = data.responseData && data.responseData.translatedText;
+  if (status !== 200 || typeof translated !== 'string' || !translated) {
+    throw new Error(data.responseDetails || '번역 서버에서 오류가 발생했습니다.');
+  }
+  if (/MYMEMORY WARNING/i.test(translated)) {
+    throw new Error('오늘의 무료 번역 한도가 초과되었습니다.');
+  }
+  return decodeEntities(translated);
+}
+
+async function translateChunk(chunk, source, target) {
   try {
-    const res = await fetch(url, { signal: ctrl.signal });
-    if (!res.ok) throw new Error('번역 서버 오류 (HTTP ' + res.status + ')');
-    const data = await res.json();
-    const status = Number(data.responseStatus);
-    const translated = data.responseData && data.responseData.translatedText;
-    if (status !== 200 || typeof translated !== 'string' || !translated) {
-      throw new Error(data.responseDetails || '번역 서버에서 오류가 발생했습니다.');
+    return await googleTranslate(chunk, source, target);
+  } catch (googleErr) {
+    try {
+      return await myMemoryTranslate(chunk, source, target);
+    } catch (myMemoryErr) {
+      if (googleErr && googleErr.name === 'AbortError' && myMemoryErr && myMemoryErr.name === 'AbortError') {
+        throw new Error('번역 서버 응답 시간이 초과되었습니다.');
+      }
+      throw myMemoryErr;
     }
-    if (/MYMEMORY WARNING/i.test(translated)) {
-      throw new Error('오늘의 무료 번역 한도가 초과되었습니다.');
-    }
-    return decodeEntities(translated);
-  } catch (e) {
-    if (e && e.name === 'AbortError') {
-      throw new Error('번역 서버 응답 시간이 초과되었습니다.');
-    }
-    throw e;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -144,7 +174,7 @@ app.post('/api/translate', async (req, res) => {
   try {
     const out = [];
     for (const chunk of chunks) {
-      out.push(await myMemoryTranslate(chunk, source, target));
+      out.push(await translateChunk(chunk, source, target));
     }
     stats.translations += 1;
     stats.chars += text.length;

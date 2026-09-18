@@ -328,6 +328,7 @@ textarea::placeholder{color:var(--muted);opacity:1}
       inputPanel = $('inputPanel');
 
   var MAX_LEN = 5000, CHUNK_LEN = 450;
+  var API_BASE = 'https://mini-block-world-api.onrender.com';
   var PLACEHOLDER = '번역 결과가 여기에 표시됩니다';
   var translating = false, currentResult = '', toastTimer = null;
   var translateBtnHTML = translateBtn.innerHTML;
@@ -440,7 +441,30 @@ textarea::placeholder{color:var(--muted);opacity:1}
     return chunks;
   }
 
+  async function translateViaBackend(chunk) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 45000);
+    try {
+      var res = await fetch(API_BASE + '/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: chunk, source: sourceSel.value, target: targetSel.value }),
+        signal: ctrl.signal
+      });
+      if (!res.ok) return null;
+      var data = await res.json();
+      if (data && data.ok && data.translatedText) return data.translatedText;
+      return null;
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function translateChunk(chunk) {
+    var viaBackend = await translateViaBackend(chunk);
+    if (viaBackend !== null) return viaBackend;
     var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(chunk) +
       '&langpair=' + sourceSel.value + '|' + targetSel.value;
     var ctrl = new AbortController();

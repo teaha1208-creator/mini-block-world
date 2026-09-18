@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasyTranslate — 쉬운 번역</title>
+<meta name="description" content="한국어 · 일본어 · 중국어 · 영어를 자유롭게 번역하는 쉬운 번역기">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%231a73e8'/%3E%3Ctext%20x='32'%20y='43'%20font-family='Segoe%20UI,sans-serif'%20font-size='26'%20font-weight='700'%20fill='%23fff'%20text-anchor='middle'%3E文A%3C/text%3E%3C/svg%3E">
+<script>
+(function(){try{var t=localStorage.getItem('et-theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){}})();
+</script>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f6f8fa;
+  --glow:rgba(26,115,232,.08);
+  --surface:#ffffff;
+  --surface-glass:rgba(255,255,255,.82);
+  --surface-2:#eef1f4;
+  --chip-bg:#f0f3f6;
+  --chip-bg-hover:#e5e9ef;
+  --border:#e3e7ec;
+  --text:#171b21;
+  --muted:#5f6672;
+  --accent:#1a73e8;
+  --accent-btn-bg:#1a73e8;
+  --accent-btn-bg-hover:#1765cc;
+  --accent-btn-text:#ffffff;
+  --kbd-bg:rgba(255,255,255,.25);
+  --danger:#d93025;
+  --danger-bg:#fdeded;
+  --danger-border:rgba(217,48,37,.22);
+  --skeleton:#e9edf1;
+  --skeleton-shine:rgba(255,255,255,.65);
+  --toast-bg:#20242b;
+  --toast-text:#f5f7fa;
+  --scrollbar:#d3d9e0;
+  --shadow-card:0 1px 2px rgba(15,23,42,.04),0 16px 40px rgba(15,23,42,.08);
+  --chevron:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='16'%20height='16'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%235f6672'%20stroke-width='2.4'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='m6%209%206%206%206-6'/%3E%3C/svg%3E");
+}
+[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#131519;
+  --glow:rgba(138,180,248,.06);
+  --surface:#1c1f24;
+  --surface-glass:rgba(22,24,28,.8);
+  --surface-2:#262a31;
+  --chip-bg:#262a31;
+  --chip-bg-hover:#2e333b;
+  --border:#2b3038;
+  --text:#e8ebf0;
+  --muted:#9aa3af;
+  --accent:#8ab4f8;
+  --accent-btn-bg:#a8c7fa;
+  --accent-btn-bg-hover:#c2d9fb;
+  --accent-btn-text:#072b61;
+  --kbd-bg:rgba(0,0,0,.12);
+  --danger:#f28b82;
+  --danger-bg:#3a2a2b;
+  --danger-border:rgba(242,139,130,.25);
+  --skeleton:#262a31;
+  --skeleton-shine:rgba(255,255,255,.07);
+  --toast-bg:#e8ebf0;
+  --toast-text:#1b1e24;
+  --scrollbar:#3a4049;
+  --shadow-card:0 1px 2px rgba(0,0,0,.3),0 16px 40px rgba(0,0,0,.35);
+  --chevron:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='16'%20height='16'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%239aa3af'%20stroke-width='2.4'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='m6%209%206%206%206-6'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR','Malgun Gothic','Hiragino Sans','Microsoft YaHei',sans-serif;
+  background-color:var(--bg);
+  background-image:radial-gradient(900px 480px at 50% -180px,var(--glow),transparent 70%);
+  background-repeat:no-repeat;
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+}
+body,.header,.t-card,.lang-select,.panel-footer,.v-divider{transition:background-color .25s ease,border-color .25s ease,color .25s ease}
+::selection{background:rgba(26,115,232,.22)}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea:focus-visible,select:focus-visible{outline:none}
+textarea::-webkit-scrollbar,.result::-webkit-scrollbar{width:8px}
+textarea::-webkit-scrollbar-thumb,.result::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:4px}
+textarea::-webkit-scrollbar-track,.result::-webkit-scrollbar-track{background:transparent}
+
+.header{position:sticky;top:0;z-index:50;background:var(--surface-glass);backdrop-filter:blur(12px) saturate(160%);-webkit-backdrop-filter:blur(12px) saturate(160%);border-bottom:1px solid var(--border)}
+.header-inner{max-width:1200px;margin:0 auto;padding:0 24px;height:62px;display:flex;align-items:center;gap:32px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#1a73e8,#6c4df0);display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 2px 8px rgba(26,115,232,.35)}
+.logo-mark svg{width:19px;height:19px}
+.logo-text{font-size:19px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.logo-text em{font-style:normal;color:var(--accent)}
+.nav{display:flex;gap:4px}
+.nav-link{font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;padding:8px 12px;border-radius:8px;transition:color .15s,background .15s}
+.nav-link:hover{color:var(--text);background:var(--surface-2)}
+.nav-link.active{color:var(--text);font-weight:600}
+.header-actions{margin-left:auto}
+[data-theme="light"] .icon-sun{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+
+.btn-icon{width:38px;height:38px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:background .15s,color .15s,transform .12s}
+.btn-icon:hover{background:var(--surface-2);color:var(--text)}
+.btn-icon:active{transform:scale(.92)}
+.btn-icon svg{width:19px;height:19px}
+.btn-icon:disabled{opacity:.45;cursor:default}
+.btn-icon:disabled:hover{background:transparent;color:var(--muted)}
+.btn-clear:hover{background:var(--danger-bg);color:var(--danger)}
+
+.main{max-width:1200px;margin:0 auto;padding:44px 24px 0}
+.hero{text-align:center;padding:24px 0 36px;animation:fadeUp .5s ease both}
+.hero-title{margin:0;font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.03em}
+.hero-sub{margin:12px 0 0;font-size:15.5px;color:var(--muted)}
+
+.t-card{display:grid;grid-template-columns:1fr 64px 1fr;grid-template-areas:"src swap tgt" "in div out";background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-card);overflow:hidden;max-width:1060px;margin:0 auto;animation:fadeUp .55s .08s ease both}
+.zone-src{grid-area:src}
+.zone-swap{grid-area:swap}
+.zone-tgt{grid-area:tgt}
+.zone-in{grid-area:in}
+.zone-div{grid-area:div}
+.zone-out{grid-area:out}
+.zone-src,.zone-swap,.zone-tgt{border-bottom:1px solid var(--border)}
+.zone-src,.zone-tgt{padding:10px 14px;display:flex;align-items:center}
+.zone-swap{display:flex;align-items:center;justify-content:center}
+.zone-in,.zone-out{display:flex;flex-direction:column}
+.zone-div{display:flex;justify-content:center;padding:6px 0}
+.v-divider{width:1px;background:var(--border)}
+
+.lang-select{flex:1;display:flex;align-items:center;gap:10px;background:var(--chip-bg);border:1px solid transparent;border-radius:12px;padding:0 6px 0 14px;transition:background .15s,border-color .15s}
+.lang-select:hover{background:var(--chip-bg-hover)}
+.lang-select:focus-within{border-color:var(--accent)}
+.lang-select>svg{width:18px;height:18px;color:var(--muted);flex:none}
+.lang-select select{flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:var(--chevron) no-repeat right 12px center/16px;border:none;outline:none;font-family:inherit;font-size:14.5px;font-weight:600;color:var(--text);padding:10px 36px 10px 0;cursor:pointer}
+
+.btn-swap{width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:transform .35s cubic-bezier(.34,1.56,.64,1),background .18s,border-color .18s,color .18s,box-shadow .18s}
+.btn-swap svg{width:20px;height:20px;transition:transform .4s ease}
+.btn-swap:hover:not(:disabled){background:var(--accent-btn-bg);border-color:var(--accent-btn-bg);color:var(--accent-btn-text);box-shadow:0 4px 12px rgba(26,115,232,.35)}
+.btn-swap:active:not(:disabled){transform:scale(.92)}
+.btn-swap:disabled{opacity:.5;cursor:default}
+.btn-swap.rotated svg{transform:rotate(180deg)}
+
+.zone-in textarea{flex:1;min-height:280px;max-height:480px;padding:24px 26px 8px;border:none;outline:none;resize:none;background:transparent;font-family:inherit;font-size:17.5px;line-height:1.75;color:var(--text)}
+textarea::placeholder{color:var(--muted);opacity:1}
+
+.result{flex:1;min-height:280px;max-height:480px;overflow-y:auto;padding:24px 26px 8px;font-size:17.5px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
+.result.placeholder{color:var(--muted)}
+
+.panel-footer{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--border);min-height:60px;flex-wrap:wrap}
+.char-count,.status-info{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.char-count.warn{color:#e8710a}
+.footer-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--accent-btn-bg);color:var(--accent-btn-text);border:none;border-radius:999px;padding:10px 20px;font-size:14.5px;font-weight:600;cursor:pointer;box-shadow:0 1px 3px rgba(26,115,232,.3);transition:background .18s,transform .12s,box-shadow .18s}
+.btn-primary:hover:not(:disabled){background:var(--accent-btn-bg-hover);transform:translateY(-1px);box-shadow:0 4px 14px rgba(26,115,232,.35)}
+.btn-primary:active:not(:disabled){transform:translateY(0) scale(.97)}
+.btn-primary:disabled{opacity:.65;cursor:default;box-shadow:none}
+.btn-primary svg{width:16px;height:16px}
+.btn-primary kbd{font-family:inherit;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--kbd-bg)}
+.spinner{width:15px;height:15px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:spin .7s linear infinite;flex:none}
+
+.btn-ghost{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:8px 13px;font-size:13.5px;font-weight:500;cursor:pointer;transition:background .15s,color .15s,border-color .15s,transform .12s}
+.btn-ghost:hover:not(:disabled){background:var(--surface-2);color:var(--text)}
+.btn-ghost:active:not(:disabled){transform:scale(.96)}
+.btn-ghost:disabled{opacity:.45;cursor:default}
+.btn-ghost svg{width:15px;height:15px}
+
+.skeleton{height:15px;border-radius:6px;background:var(--skeleton);margin:16px 0;position:relative;overflow:hidden}
+.skeleton::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,var(--skeleton-shine),transparent);animation:shimmer 1.4s infinite}
+.skeleton:nth-child(1){width:92%;margin-top:28px}
+.skeleton:nth-child(2){width:76%}
+.skeleton:nth-child(3){width:58%}
+
+.error-msg{display:flex;gap:12px;align-items:flex-start;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:12px;padding:14px 16px}
+.error-msg>svg{width:22px;height:22px;color:var(--danger);flex:none;margin-top:1px}
+.error-title{font-size:15px;font-weight:600}
+.error-detail{font-size:13px;color:var(--muted);line-height:1.5;margin-top:4px}
+
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,16px);display:flex;align-items:center;gap:9px;background:var(--toast-bg);color:var(--toast-text);padding:11px 18px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;z-index:100;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast .t-icon{display:flex;flex:none}
+.toast .t-icon svg{width:18px;height:18px}
+.toast.success .t-icon{color:#34d399}
+.toast.error .t-icon{color:#f87171}
+.toast.info .t-icon{color:#60a5fa}
+
+.footer{text-align:center;padding:48px 16px 40px;color:var(--muted);font-size:13px;line-height:1.9}
+.footer a{color:inherit;text-decoration:none}
+.footer a:hover{color:var(--text);text-decoration:underline}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{100%{transform:translateX(100%)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)}}
+.shake{animation:shake .5s ease}
+
+@media (max-width:880px){
+  .t-card{grid-template-columns:1fr;grid-template-areas:"src" "in" "swap" "tgt" "out"}
+  .zone-src,.zone-tgt{padding:10px 12px}
+  .zone-swap{padding:10px 0}
+  .zone-swap .btn-swap svg{transform:rotate(90deg)}
+  .btn-swap.rotated svg{transform:rotate(270deg)}
+  .zone-in{border-bottom:1px solid var(--border)}
+  .zone-div{display:none}
+  .zone-in textarea,.result{min-height:170px;max-height:320px;padding:18px 18px 6px}
+  .hero{padding:12px 0 26px}
+}
+@media (max-width:640px){
+  .nav{display:none}
+  .header-inner{gap:16px;padding:0 16px}
+  .btn-primary kbd{display:none}
+  .main{padding:24px 12px 0}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner">
+    <a class="logo" href="#" aria-label="EasyTranslate 홈">
+      <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+      <span class="logo-text">Easy<em>Translate</em></span>
+    </a>
+    <nav class="nav" aria-label="주 메뉴">
+      <a href="#" class="nav-link active">홈</a>
+      <a href="#" class="nav-link">텍스트 번역</a>
+      <a href="#" class="nav-link">문서 번역</a>
+      <a href="#" class="nav-link">도움말</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn-icon" id="themeToggle" type="button" aria-label="테마 변경" title="테마 변경">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+<main class="main">
+  <section class="hero">
+    <h1 class="hero-title">세계의 언어, 가장 쉽게</h1>
+    <p class="hero-sub">한국어 · 일본어 · 중국어 · 영어를 자유롭게 번역하세요</p>
+  </section>
+  <section class="t-card" aria-label="번역기">
+    <div class="zone-src">
+      <div class="lang-select">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <select id="sourceLang" aria-label="출발 언어">
+          <option value="ko" selected>한국어</option>
+          <option value="ja">日本語</option>
+          <option value="zh-CN">中文(简体)</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
+    <div class="zone-swap">
+      <button class="btn-swap" id="swapBtn" type="button" aria-label="언어 교체" title="언어 교체">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>
+      </button>
+    </div>
+    <div class="zone-tgt">
+      <div class="lang-select">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <select id="targetLang" aria-label="도착 언어">
+          <option value="ko">한국어</option>
+          <option value="ja">日本語</option>
+          <option value="zh-CN">中文(简体)</option>
+          <option value="en" selected>English</option>
+        </select>
+      </div>
+    </div>
+    <div class="zone-in" id="inputPanel">
+      <textarea id="inputText" maxlength="5000" placeholder="번역할 텍스트를 입력하세요" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+      <div class="panel-footer">
+        <span class="char-count" id="charCount">0 / 5000</span>
+        <div class="footer-actions">
+          <button class="btn-icon btn-clear" id="clearBtn" type="button" aria-label="입력 내용 전체 삭제" title="입력 내용 전체 삭제">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+          <button class="btn-primary" id="translateBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+            <span>번역하기</span>
+            <kbd>Ctrl + Enter</kbd>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="zone-div"><div class="v-divider"></div></div>
+    <div class="zone-out">
+      <div class="result placeholder" id="resultText" aria-live="polite">번역 결과가 여기에 표시됩니다</div>
+      <div class="panel-footer">
+        <span class="status-info" id="statusInfo"></span>
+        <div class="footer-actions">
+          <button class="btn-ghost" id="copyBtn" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>복사</span>
+          </button>
+          <button class="btn-ghost" id="downloadBtn" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>다운로드</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <footer class="footer">
+    <p>© 2026 EasyTranslate · MyMemory 번역 API 기반</p>
+    <p><a href="#">이용약관</a> · <a href="#">개인정보처리방침</a> · <a href="#">문의하기</a></p>
+  </footer>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span class="t-icon" id="toastIcon"></span>
+  <span id="toastMsg"></span>
+</div>
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var inputEl = $('inputText'), resultEl = $('resultText'), charCountEl = $('charCount'),
+      statusEl = $('statusInfo'), clearBtn = $('clearBtn'), translateBtn = $('translateBtn'),
+      copyBtn = $('copyBtn'), downloadBtn = $('downloadBtn'), swapBtn = $('swapBtn'),
+      sourceSel = $('sourceLang'), targetSel = $('targetLang'), themeToggle = $('themeToggle'),
+      toastEl = $('toast'), toastIconEl = $('toastIcon'), toastMsgEl = $('toastMsg'),
+      inputPanel = $('inputPanel');
+
+  var MAX_LEN = 5000, CHUNK_LEN = 450;
+  var PLACEHOLDER = '번역 결과가 여기에 표시됩니다';
+  var translating = false, currentResult = '', toastTimer = null;
+  var translateBtnHTML = translateBtn.innerHTML;
+
+  var ICONS = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+  };
+
+  function showToast(msg, type) {
+    toastEl.className = 'toast ' + (type || 'success');
+    toastIconEl.innerHTML = ICONS[type] || ICONS.success;
+    toastMsgEl.textContent = msg;
+    void toastEl.offsetWidth;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2400);
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem('et-theme', theme); } catch (e) {}
+  }
+
+  function decodeEntities(s) {
+    var t = document.createElement('textarea');
+    t.innerHTML = s;
+    return t.value;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function updateCharCount() {
+    var len = inputEl.value.length;
+    charCountEl.textContent = len + ' / ' + MAX_LEN;
+    charCountEl.classList.toggle('warn', len >= 4500);
+  }
+
+  function updateActionStates() {
+    copyBtn.disabled = translating || !currentResult;
+    downloadBtn.disabled = translating || !currentResult;
+  }
+
+  function setBusy(busy) {
+    translating = busy;
+    translateBtn.disabled = busy;
+    clearBtn.disabled = busy;
+    swapBtn.disabled = busy;
+    translateBtn.innerHTML = busy
+      ? '<span class="spinner"></span><span>번역 중…</span>'
+      : translateBtnHTML;
+    updateActionStates();
+  }
+
+  function setResult(text) {
+    currentResult = text;
+    resultEl.classList.remove('error');
+    if (text) {
+      resultEl.classList.remove('placeholder');
+      resultEl.textContent = text;
+    } else {
+      resultEl.classList.add('placeholder');
+      resultEl.textContent = PLACEHOLDER;
+    }
+    updateActionStates();
+  }
+
+  function renderLoading() {
+    resultEl.classList.remove('placeholder', 'error');
+    resultEl.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+  }
+
+  function renderError(err) {
+    resultEl.classList.remove('placeholder');
+    resultEl.classList.add('error');
+    resultEl.innerHTML =
+      '<div class="error-msg">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+      '<div><div class="error-title">번역에 실패했습니다</div>' +
+      '<div class="error-detail">' + escapeHtml(err && err.message ? err.message : '잠시 후 다시 시도해주세요.') + '</div></div></div>';
+  }
+
+  function splitIntoChunks(text, max) {
+    max = max || CHUNK_LEN;
+    var chunks = [], buf = '', sentence = '';
+    var pushSentence = function () {
+      if (!sentence) return;
+      if (buf.length + sentence.length > max && buf) { chunks.push(buf); buf = ''; }
+      if (sentence.length > max) {
+        if (buf) { chunks.push(buf); buf = ''; }
+        for (var i = 0; i < sentence.length; i += max) chunks.push(sentence.slice(i, i + max));
+        sentence = '';
+        return;
+      }
+      buf += sentence;
+      sentence = '';
+    };
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      sentence += ch;
+      if ('。！？!?\n'.indexOf(ch) !== -1) pushSentence();
+    }
+    pushSentence();
+    if (buf) chunks.push(buf);
+    return chunks;
+  }
+
+  async function translateChunk(chunk) {
+    var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(chunk) +
+      '&langpair=' + sourceSel.value + '|' + targetSel.value;
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 15000);
+    try {
+      var res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) throw new Error('번역 서버 오류 (HTTP ' + res.status + ')');
+      var data = await res.json();
+      var status = Number(data.responseStatus);
+      var translated = data.responseData && data.responseData.translatedText;
+      if (status !== 200 || typeof translated !== 'string' || !translated) {
+        throw new Error(data.responseDetails || '번역 서버에서 오류가 발생했습니다.');
+      }
+      if (/MYMEMORY WARNING/i.test(translated)) {
+        throw new Error('오늘의 무료 번역 한도가 초과되었습니다. 내일 다시 시도해주세요.');
+      }
+      return decodeEntities(translated);
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw new Error('응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+      if (e instanceof TypeError) throw new Error('네트워크 연결을 확인한 후 다시 시도해주세요.');
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function translate() {
+    if (translating) return;
+    var text = inputEl.value.trim();
+    if (!text) {
+      showToast('번역할 텍스트를 입력해주세요.', 'info');
+      inputPanel.classList.remove('shake');
+      void inputPanel.offsetWidth;
+      inputPanel.classList.add('shake');
+      inputEl.focus();
+      return;
+    }
+    if (sourceSel.value === targetSel.value) {
+      showToast('출발 언어와 도착 언어가 서로 달라야 합니다.', 'info');
+      return;
+    }
+    setBusy(true);
+    renderLoading();
+    var started = performance.now();
+    var chunks = splitIntoChunks(text);
+    var results = [];
+    var run = function (i) {
+      if (i >= chunks.length) {
+        setResult(results.join(''));
+        var secs = ((performance.now() - started) / 1000).toFixed(1);
+        statusEl.textContent = sourceSel.options[sourceSel.selectedIndex].text + ' → ' +
+          targetSel.options[targetSel.selectedIndex].text + ' · ' + secs + '초';
+        return Promise.resolve();
+      }
+      statusEl.textContent = chunks.length > 1 ? '번역 중… (' + (i + 1) + '/' + chunks.length + ')' : '번역 중…';
+      return translateChunk(chunks[i]).then(function (t) {
+        results.push(t);
+        return run(i + 1);
+      });
+    };
+    run(0).catch(function (err) {
+      renderError(err);
+      statusEl.textContent = '번역 실패';
+    }).then(function () {
+      setBusy(false);
+    });
+  }
+
+  function clearAll() {
+    if (translating) return;
+    inputEl.value = '';
+    setResult('');
+    statusEl.textContent = '';
+    updateCharCount();
+    inputEl.focus();
+  }
+
+  function handleSwap() {
+    if (translating) return;
+    var s = sourceSel.value;
+    sourceSel.value = targetSel.value;
+    targetSel.value = s;
+    if (currentResult) {
+      var prevInput = inputEl.value;
+      inputEl.value = currentResult;
+      setResult(prevInput);
+      updateCharCount();
+    }
+    swapBtn.classList.toggle('rotated');
+    inputEl.focus();
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return legacyCopy(text); });
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+    return ok;
+  }
+
+  function copyResult() {
+    if (!currentResult || translating) return;
+    copyText(currentResult).then(function (ok) {
+      showToast(ok ? '복사되었습니다' : '복사에 실패했습니다.', ok ? 'success' : 'error');
+    });
+  }
+
+  function downloadResult() {
+    if (!currentResult || translating) return;
+    var blob = new Blob(['\uFEFF' + currentResult], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var now = new Date();
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    a.href = url;
+    a.download = 'translation_' + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) +
+      '_' + pad(now.getHours()) + pad(now.getMinutes()) + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('번역 결과가 다운로드되었습니다.', 'success');
+  }
+
+  inputEl.addEventListener('input', updateCharCount);
+  translateBtn.addEventListener('click', translate);
+  clearBtn.addEventListener('click', clearAll);
+  copyBtn.addEventListener('click', copyResult);
+  downloadBtn.addEventListener('click', downloadResult);
+  swapBtn.addEventListener('click', handleSwap);
+  themeToggle.addEventListener('click', function () {
+    applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      translate();
+    }
+  });
+  inputPanel.addEventListener('animationend', function () {
+    inputPanel.classList.remove('shake');
+  });
+
+  updateCharCount();
+  updateActionStates();
+})();
+</script>
+</body>
+</html>

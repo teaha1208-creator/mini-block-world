@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>미니 블록 월드</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#87ceeb;font-family:'Segoe UI',Malgun Gothic,sans-serif;user-select:none}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none}
+  #cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:30px;font-weight:bold;mix-blend-mode:difference}
+  #blockname{position:absolute;bottom:78px;left:50%;transform:translateX(-50%);color:#fff;font-weight:bold;text-shadow:0 1px 3px #000}
+  #hotbar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+  .slot{width:54px;height:54px;border:3px solid #2a2a2a;border-radius:6px;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .slot .cube{width:30px;height:30px;border-radius:4px;background-size:cover;image-rendering:pixelated}
+  .slot .num{position:absolute;top:2px;left:5px;color:#fff;font-size:11px;font-weight:bold;text-shadow:0 1px 2px #000}
+  .slot.sel{border-color:#fff;background:rgba(255,255,255,.3)}
+  #overlay{position:fixed;inset:0;background:rgba(10,20,40,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;cursor:pointer;text-align:center;backdrop-filter:blur(2px)}
+  #overlay h1{font-size:44px;margin:0 0 6px;letter-spacing:3px;text-shadow:0 3px 0 #2a5d1e,0 6px 12px rgba(0,0,0,.5)}
+  #overlay .start{font-size:20px;margin:18px 0 24px;animation:blink 1.2s infinite}
+  #overlay p{margin:4px;color:#ddd;font-size:14px}
+  @keyframes blink{50%{opacity:.35}}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="cross">+</div>
+  <div id="blockname"></div>
+  <div id="hotbar"></div>
+</div>
+<div id="overlay">
+  <h1>미니 블록 월드</h1>
+  <p>WASD 이동 · 마우스 시점 · Space 점프</p>
+  <p>좌클릭 블록 제거 · 우클릭 블록 설치 · 1 2 3 블록 선택</p>
+  <div class="start">클릭해서 게임 시작</div>
+  <p>ESC 키로 일시정지</p>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 30, 90);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 200);
+camera.rotation.order = 'YXZ';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7a5a, 1.0));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7);
+sun.position.set(30, 60, 20);
+scene.add(sun);
+
+function makeTex(base, speck, strip) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 16;
+  const g = cv.getContext('2d');
+  g.fillStyle = base; g.fillRect(0, 0, 16, 16);
+  g.fillStyle = speck;
+  for (let i = 0; i < 90; i++) g.fillRect(Math.random() * 16 | 0, Math.random() * 16 | 0, 1, 1);
+  if (strip) {
+    g.fillStyle = strip; g.fillRect(0, 0, 16, 4);
+    g.fillStyle = speck;
+    for (let i = 0; i < 20; i++) g.fillRect(Math.random() * 16 | 0, Math.random() * 4 | 0, 1, 1);
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.magFilter = THREE.NearestFilter;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return { tex: t, url: cv.toDataURL() };
+}
+
+const grassTop = makeTex('#5fae3d', '#4c9330');
+const grassSide = makeTex('#8a5a35', '#7a4d2c', '#5fae3d');
+const dirtTex = makeTex('#8a5a35', '#7a4d2c');
+const stoneTex = makeTex('#8f8f8f', '#767676');
+const mat = t => new THREE.MeshLambertMaterial({ map: t.tex });
+const grassMats = [mat(grassSide), mat(grassSide), mat(grassTop), mat(dirtTex), mat(grassSide), mat(grassSide)];
+
+const TYPES = [
+  { name: '잔디', mats: grassMats, url: grassTop.url },
+  { name: '흙', mats: mat(dirtTex), url: dirtTex.url },
+  { name: '돌', mats: mat(stoneTex), url: stoneTex.url },
+];
+
+const DIRS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+const world = new Map();
+const meshes = new Map();
+const key = (x, y, z) => x + ',' + y + ',' + z;
+const geo = new THREE.BoxGeometry(1, 1, 1);
+
+function addMesh(x, y, z) {
+  const m = new THREE.Mesh(geo, TYPES[world.get(key(x, y, z))].mats);
+  m.position.set(x + 0.5, y + 0.5, z + 0.5);
+  m.userData.b = [x, y, z];
+  scene.add(m);
+  meshes.set(key(x, y, z), m);
+}
+
+const exposed = (x, y, z) => DIRS.some(d => !world.has(key(x + d[0], y + d[1], z + d[2])));
+
+const SIZE = 20, HALF = SIZE / 2;
+const heightAt = (x, z) => 4 + Math.round(Math.sin(x * 0.4) * Math.cos(z * 0.4) * 2 + Math.sin(x * 0.13 + z * 0.17) * 1.5);
+for (let x = -HALF; x < HALF; x++)
+  for (let z = -HALF; z < HALF; z++) {
+    const h = heightAt(x, z);
+    for (let y = 0; y <= h; y++) world.set(key(x, y, z), y === h ? 0 : y >= h - 2 ? 1 : 2);
+  }
+for (const k of world.keys()) {
+  const [x, y, z] = k.split(',').map(Number);
+  if (exposed(x, y, z)) addMesh(x, y, z);
+}
+
+function removeBlock(x, y, z) {
+  const k = key(x, y, z);
+  if (!world.has(k)) return;
+  world.delete(k);
+  const m = meshes.get(k);
+  if (m) { scene.remove(m); meshes.delete(k); }
+  for (const [dx, dy, dz] of DIRS) {
+    const nk = key(x + dx, y + dy, z + dz);
+    if (world.has(nk) && !meshes.has(nk)) addMesh(x + dx, y + dy, z + dz);
+  }
+}
+
+function placeBlock(x, y, z, t) {
+  world.set(key(x, y, z), t);
+  addMesh(x, y, z);
+}
+
+const player = { pos: new THREE.Vector3(0.5, heightAt(0, 0) + 3, 0.5), vel: new THREE.Vector3(), onGround: false };
+const spawn = player.pos.clone();
+const R = 0.3, H = 1.8, EYE = 1.6;
+
+function collides(p) {
+  for (let x = Math.floor(p.x - R); x <= Math.floor(p.x + R); x++)
+    for (let y = Math.floor(p.y); y <= Math.floor(p.y + H); y++)
+      for (let z = Math.floor(p.z - R); z <= Math.floor(p.z + R); z++)
+        if (world.has(key(x, y, z))) return true;
+  return false;
+}
+
+let yaw = 0, pitch = 0, sel = 0;
+const keys = {};
+
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space') e.preventDefault();
+  if (e.code.startsWith('Digit')) {
+    const n = +e.code[5];
+    if (n >= 1 && n <= 3) select(n - 1);
+  }
+});
+addEventListener('keyup', e => keys[e.code] = false);
+onblur = () => { for (const k in keys) keys[k] = false; };
+
+document.addEventListener('mousemove', e => {
+  if (document.pointerLockElement !== renderer.domElement) return;
+  yaw -= e.movementX * 0.0022;
+  pitch = Math.max(-1.55, Math.min(1.55, pitch - e.movementY * 0.0022));
+});
+
+const raycaster = new THREE.Raycaster();
+raycaster.far = 7;
+
+document.addEventListener('mousedown', e => {
+  if (document.pointerLockElement !== renderer.domElement) return;
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+  const hit = raycaster.intersectObjects([...meshes.values()], false)[0];
+  if (!hit) return;
+  const [bx, by, bz] = hit.object.userData.b;
+  if (e.button === 0) {
+    removeBlock(bx, by, bz);
+  } else if (e.button === 2) {
+    const n = hit.face.normal;
+    const nx = bx + n.x, ny = by + n.y, nz = bz + n.z;
+    const p = player.pos;
+    const overlap = nx < p.x + R && nx + 1 > p.x - R && ny < p.y + H && ny + 1 > p.y && nz < p.z + R && nz + 1 > p.z - R;
+    if (!world.has(key(nx, ny, nz)) && !overlap) placeBlock(nx, ny, nz, sel);
+  }
+});
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+function update(dt) {
+  const f = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+  const s = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+  const len = Math.hypot(f, s) || 1;
+  const speed = 4.5 * dt / len;
+  const mx = (-Math.sin(yaw) * f + Math.cos(yaw) * s) * speed;
+  const mz = (-Math.cos(yaw) * f - Math.sin(yaw) * s) * speed;
+  player.pos.x += mx;
+  if (collides(player.pos)) player.pos.x -= mx;
+  player.pos.z += mz;
+  if (collides(player.pos)) player.pos.z -= mz;
+
+  if (keys.Space && player.onGround) player.vel.y = 9;
+  player.vel.y = Math.max(-15, player.vel.y - 28 * dt);
+  player.pos.y += player.vel.y * dt;
+  player.onGround = false;
+  if (collides(player.pos)) {
+    player.pos.y -= player.vel.y * dt;
+    if (player.vel.y < 0) player.onGround = true;
+    player.vel.y = 0;
+  }
+  if (player.pos.y < -25) { player.pos.copy(spawn); player.vel.set(0, 0, 0); }
+}
+
+const hotbarEl = document.getElementById('hotbar');
+const nameEl = document.getElementById('blockname');
+TYPES.forEach((t, i) => {
+  const d = document.createElement('div');
+  d.className = 'slot';
+  d.innerHTML = `<span class="num">${i + 1}</span><div class="cube" style="background:url(${t.url})"></div>`;
+  hotbarEl.appendChild(d);
+});
+function select(i) {
+  sel = i;
+  [...hotbarEl.children].forEach((c, j) => c.classList.toggle('sel', j === i));
+  nameEl.textContent = TYPES[i].name;
+}
+select(0);
+
+const overlay = document.getElementById('overlay');
+overlay.addEventListener('click', () => renderer.domElement.requestPointerLock());
+document.addEventListener('pointerlockchange', () => {
+  overlay.style.display = document.pointerLockElement === renderer.domElement ? 'none' : 'flex';
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.033);
+  if (document.pointerLockElement === renderer.domElement) update(dt);
+  camera.rotation.set(pitch, yaw, 0);
+  camera.position.set(player.pos.x, player.pos.y + EYE, player.pos.z);
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

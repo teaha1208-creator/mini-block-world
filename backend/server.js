@@ -190,6 +190,25 @@ app.post('/api/translate', async (req, res) => {
   }
 });
 
+app.get('/api/debug/upstreams', async (req, res) => {
+  const q = encodeURIComponent('hello');
+  const targets = {
+    googleGtx: 'https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl=en&tl=ko&q=' + q,
+    googleChromeEx: 'https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=en&tl=ko&q=' + q,
+    myMemory: 'https://api.mymemory.translated.net/get?q=hello&langpair=en%7Cko'
+  };
+  const result = {};
+  for (const [name, url] of Object.entries(targets)) {
+    try {
+      const r = await fetchWithTimeout(url, 10000);
+      result[name] = r.status;
+    } catch (e) {
+      result[name] = 'error: ' + (e.name === 'AbortError' ? 'timeout' : e.message);
+    }
+  }
+  res.json(result);
+});
+
 app.use((req, res) => {
   res.status(404).json({ ok: false, error: 'Not Found' });
 });

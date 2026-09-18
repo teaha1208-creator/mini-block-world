@@ -463,8 +463,6 @@ textarea::placeholder{color:var(--muted);opacity:1}
   }
 
   async function translateChunk(chunk) {
-    var viaBackend = await translateViaBackend(chunk);
-    if (viaBackend !== null) return viaBackend;
     var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(chunk) +
       '&langpair=' + sourceSel.value + '|' + targetSel.value;
     var ctrl = new AbortController();
@@ -483,6 +481,8 @@ textarea::placeholder{color:var(--muted);opacity:1}
       }
       return decodeEntities(translated);
     } catch (e) {
+      var viaBackend = await translateViaBackend(chunk);
+      if (viaBackend !== null) return viaBackend;
       if (e && e.name === 'AbortError') throw new Error('응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
       if (e instanceof TypeError) throw new Error('네트워크 연결을 확인한 후 다시 시도해주세요.');
       throw e;

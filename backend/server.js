@@ -190,30 +190,6 @@ app.post('/api/translate', async (req, res) => {
   }
 });
 
-app.get('/api/debug/upstreams', async (req, res) => {
-  const q = encodeURIComponent('hello');
-  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
-  const targets = {
-    googleGtxPlain: 'https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl=en&tl=ko&q=' + q,
-    googleGtxWithUA: 'https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl=en&tl=ko&q=' + q,
-    lingvaMl: 'https://lingva.ml/api/v1/en/ko/hello',
-    lingvaLunar: 'https://lingva.lunar.icu/api/v1/en/ko/hello',
-    myMemoryWithEmail: 'https://api.mymemory.translated.net/get?q=hello&langpair=en%7Cko&de=teaha1208%40gmail.com&mt=1'
-  };
-  const result = {};
-  for (const [name, url] of Object.entries(targets)) {
-    try {
-      const opts = {};
-      if (name === 'googleGtxWithUA') opts.headers = { 'User-Agent': UA };
-      const r = await fetchWithTimeout(url, 10000);
-      result[name] = r.status;
-    } catch (e) {
-      result[name] = 'error: ' + (e.name === 'AbortError' ? 'timeout' : e.message);
-    }
-  }
-  res.json(result);
-});
-
 app.use((req, res) => {
   res.status(404).json({ ok: false, error: 'Not Found' });
 });
